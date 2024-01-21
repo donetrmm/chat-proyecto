@@ -1,74 +1,117 @@
+/* App.css (o estilos en línea en el componente) */
 
 .App {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 50px;
+  justify-content: center;
+  height: 100vh;
+  font-family: 'Arial', sans-serif;
 }
 
 .ChatContainer {
-  width: 400px;
-  border: 1px solid #ccc;
+  max-width: 600px;
+  width: 100%;
   padding: 20px;
-  border-radius: 8px;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  background-color: #f9f9f9;
 }
 
 .MessagesContainer {
-  max-height: 30em; /* Ajusta el alto según tus necesidades */
+  max-height: 300px;
   overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 10px;
   margin-bottom: 10px;
 }
 
 .Message {
-  padding: 8px;
-  margin: 8px;
-  border-radius: 8px;
-  word-wrap: break-word;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
 }
 
 .UserMessage {
-  background-color: #2196f3;
-  color: #fff;
-  align-self: flex-end;
-  text-align: right;
+  background-color: #99ccff;
 }
 
 .OtherMessage {
-  background-color: #f1f1f1;
-  color: #333;
-  align-self: flex-start;
+  background-color: #e6e6e6;
 }
 
 form {
   display: flex;
-  margin-top: 10px;
 }
 
 input {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 5px 0 0 5px;
 }
 
 button {
-  margin-left: 10px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background-color: #2196f3;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 0 5px 5px 0;
+  background-color: #007bff;
   color: #fff;
   cursor: pointer;
 }
 
-button:hover {
-  background-color: #0b7dda;
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
- .sendIcon {
-  width: 1.5em;
-  height: 1.4em;
- }
+
+.RoomButtons {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+@media (max-width: 600px) {
+  .ChatContainer {
+    padding: 10px;
+  }
+
+  button {
+    margin: 0 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+  }
+}
+
+/* App.css */
+
+.ReturnButton {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #d9534f; /* Color rojo para el botón de regreso */
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.ReturnButton:hover {
+  background-color: #c9302c;
+}
+

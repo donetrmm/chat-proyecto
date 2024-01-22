@@ -1,4 +1,3 @@
-// App.js
 import React, { useState } from 'react';
 import GeneralChat from './pages/GeneralChat';
 import GamesChat from './pages/GamesChat';
@@ -18,7 +17,6 @@ const App = () => {
 
   const handleReturnToGeneralChat = (name) => {
     setShowGamesChat(false);
-    // Si se proporciona un nombre al regresar, lo establecemos como nombre de usuario
     if (name) {
       setUsername(name);
     }

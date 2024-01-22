@@ -1,4 +1,3 @@
-// GeneralChat.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { IoSend } from 'react-icons/io5';
 
@@ -9,6 +8,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   const [socket, setSocket] = useState(null);
   const [enteredChat, setEnteredChat] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState(0);
+  const [whisperTarget, setWhisperTarget] = useState('');
 
   const messagesEndRef = useRef(null);
 
@@ -16,10 +16,13 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
     const fetchConnectedUsers = async () => {
       try {
         const response = await fetch('http://localhost:8080/api/connections');
-        const data = await response.text();
-        setConnectedUsers(parseInt(data, 10));
+        if (!response.ok) {
+          throw new Error(`Error al obtener la cantidad de usuarios conectados: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        setConnectedUsers(data.connections);
       } catch (error) {
-        console.error('Error al obtener la cantidad de usuarios conectados:', error);
+        console.error(error.message);
       }
     };
 
@@ -51,6 +54,10 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
     const handleSocketMessage = (event) => {
       const newMessage = JSON.parse(event.data);
       setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+      if (newMessage.whisper && newMessage.whisperTarget === username) {
+        setWhisperTarget('');
+      }
     };
 
     const handleSocketClose = () => {
@@ -70,7 +77,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
       socket.removeEventListener('message', handleSocketMessage);
       socket.removeEventListener('close', handleSocketClose);
     };
-  }, [socket]);
+  }, [socket, username]);
 
   const handleUsernameSubmit = (e) => {
     e.preventDefault();
@@ -96,14 +103,42 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
     e.preventDefault();
 
     if (message.trim() !== '') {
-      const messageObject = {
-        type: 'message',
-        content: message,
-        username,
-      };
+      const whisperMatch = message.match(/^\/whisper (\w+) (.+)/);
+      if (whisperMatch) {
+        const whisperTarget = whisperMatch[1];
+        const whisperContent = whisperMatch[2];
 
-      socket.send(JSON.stringify(messageObject));
+        const whisperObject = {
+          type: 'message',
+          content: whisperContent,
+          username,
+          whisper: true,
+          whisperTarget,
+        };
+
+        socket.send(JSON.stringify(whisperObject));
+      } else {
+        const messageObject = {
+          type: 'message',
+          content: message,
+          username,
+        };
+
+        socket.send(JSON.stringify(messageObject));
+      }
+
       setMessage('');
+    }
+  };
+
+  const handleWhisper = (whisperTarget) => {
+    setMessage(`/whisper ${whisperTarget} `);
+    setWhisperTarget(whisperTarget);
+  };
+
+  const handleReply = () => {
+    if (whisperTarget) {
+      setMessage(`/whisper ${whisperTarget} `);
     }
   };
 
@@ -117,7 +152,9 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
       {enteredChat ? (
         <div>
           <h1>Bienvenido al Chat, {username}!</h1>
-          <h1>Usuarios Conectados: {connectedUsers}</h1>
+          <div className="UserCountContainer">
+            <p>Usuarios Conectados: {connectedUsers}</p>
+          </div>
           <div className="MessagesContainer" ref={messagesEndRef}>
             {messages.map((msg, index) => (
               <div
@@ -127,6 +164,11 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
                 }`}
               >
                 <strong>{msg.username}:</strong> {msg.content}
+                {msg.whisper && (
+                  <button onClick={() => handleWhisper(msg.username)}>
+                    Responder
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -139,6 +181,9 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
             />
             <button type="submit">
               <IoSend className="sendIcon" />
+            </button>
+            <button onClick={handleReply} disabled={!whisperTarget}>
+              Responder
             </button>
           </form>
           <button onClick={onSwitchToGamesChat}>Cambiar a Sala Games</button>

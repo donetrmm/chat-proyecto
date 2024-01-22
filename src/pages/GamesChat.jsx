@@ -30,13 +30,12 @@ const GamesChat = ({ username, onReturnToGeneralChat }) => {
     socket.on('disconnect', () => {
       console.log('Conexión cerrada');
 
-      // Implementar lógica de reconexión aquí
       setTimeout(() => {
         console.log('Intentando reconectar...');
         const newSocket = io('http://localhost:8080', { path: '/api/rooms' });
         setSocket(newSocket);
         newSocket.emit('joinRoom', 'games');
-      }, 2000); // Intentar reconectar después de 2 segundos
+      }, 2000);
     });
   }, [socket]);
 

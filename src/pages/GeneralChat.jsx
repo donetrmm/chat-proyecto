@@ -14,6 +14,8 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+
+    // LONG POLLING
     const fetchConnectedUsersLongPolling = async () => {
       try {
         const response = await fetch('http://localhost:8080/api/connections');
@@ -58,6 +60,8 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
 
     return () => clearInterval(whisperMessagesPolling);
   }, [username]);
+  
+  //BARRA DE DESPLAZAMIENTO
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -65,6 +69,8 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
     }
   }, [messages, whisperMessages]);
 
+  // WEBSOCKET
+  
   useEffect(() => {
     const newSocket = new WebSocket('ws://localhost:8080/api/chat');
     setSocket(newSocket);

@@ -9,6 +9,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   const [enteredChat, setEnteredChat] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState(0);
   const [whisperTarget, setWhisperTarget] = useState('');
+  const [whisperMessages, setWhisperMessages] = useState([]);
 
   const messagesEndRef = useRef(null);
 
@@ -34,10 +35,33 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   }, []);
 
   useEffect(() => {
+    const fetchWhisperMessages = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/whisper-messages?username=${username}`
+        );
+        if (!response.ok) {
+          throw new Error(
+            `Error al obtener mensajes de susurro: ${response.status} ${response.statusText}`
+          );
+        }
+        const data = await response.json();
+        setWhisperMessages(data.messages);
+      } catch (error) {
+        console.error(error.message);
+      }
+    };
+
+    const whisperMessagesPolling = setInterval(fetchWhisperMessages, 2000);
+
+    return () => clearInterval(whisperMessagesPolling);
+  }, [username]);
+
+  useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, whisperMessages]);
 
   useEffect(() => {
     const newSocket = new WebSocket('ws://localhost:8080/api/chat');
@@ -53,7 +77,12 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
 
     const handleSocketMessage = (event) => {
       const newMessage = JSON.parse(event.data);
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+      if (newMessage.whisper) {
+        setWhisperMessages((prevWhisperMessages) => [...prevWhisperMessages, newMessage]);
+      } else {
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      }
 
       if (newMessage.whisper && newMessage.whisperTarget === username) {
         setWhisperTarget('');
@@ -108,15 +137,31 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
         const whisperTarget = whisperMatch[1];
         const whisperContent = whisperMatch[2];
 
-        const whisperObject = {
-          type: 'message',
-          content: whisperContent,
-          username,
-          whisper: true,
-          whisperTarget,
-        };
+        fetch('http://localhost:8080/api/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    username,
+    content: whisperContent,
+    whisper: true,
+    whisperTarget,
+  }),
+})
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then((data) => {
+    console.log('Response from server:', data);
+  })
+  .catch((error) => {
+    console.error('Error sending whisper:', error);
+  });
 
-        socket.send(JSON.stringify(whisperObject));
       } else {
         const messageObject = {
           type: 'message',
@@ -130,6 +175,8 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
       setMessage('');
     }
   };
+
+  
 
   const handleWhisper = (whisperTarget) => {
     setMessage(`/whisper ${whisperTarget} `);
@@ -147,64 +194,80 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
     setUsername(user);
   };
 
-  return (
-    <div className="ChatContainer">
-      {enteredChat ? (
-        <div>
-          <h1>Bienvenido al Chat, {username}!</h1>
-          <div className="UserCountContainer">
-            <p>Usuarios Conectados: {connectedUsers}</p>
-          </div>
-          <div className="MessagesContainer" ref={messagesEndRef}>
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`Message ${
-                  msg.username === username ? 'UserMessage' : 'OtherMessage'
-                }`}
-              >
-                <strong>{msg.username}:</strong> {msg.content}
-                {msg.whisper && (
-                  <button onClick={() => handleWhisper(msg.username)}>
-                    Responder
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <form onSubmit={handleMessageSubmit}>
-            <input
-              type="text"
-              placeholder="Escribe un mensaje..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <button type="submit">
-              <IoSend className="sendIcon" />
-            </button>
-            <button onClick={handleReply} disabled={!whisperTarget}>
-              Responder
-            </button>
-          </form>
-          <button onClick={onSwitchToGamesChat}>Cambiar a Sala Games</button>
+return (
+  <div className="ChatContainer">
+    {enteredChat ? (
+      <div>
+        <h1>Bienvenido al Chat, {username}!</h1>
+        <div className="UserCountContainer">
+          <p>Usuarios Conectados: {connectedUsers}</p>
         </div>
-      ) : (
-        <div onLoad={getUsernameFromSession}>
-          <h1>Ingresa un nombre para entrar al chat</h1>
-          <form onSubmit={handleUsernameSubmit}>
-            <input
-              type="text"
-              className="inputMessage"
-              placeholder="Nickname"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <button type="submit">Entrar al chat</button>
-          </form>
+        <div className="MessagesContainer" ref={messagesEndRef}>
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`Message ${
+                msg.username === username ? 'UserMessage' : 'OtherMessage'
+              }${msg.whisper ? ' WhisperMessage' : ''}`}
+            >
+              <strong>{msg.username}:</strong> {msg.content}
+              {msg.whisper && (
+                <button onClick={() => handleWhisper(msg.username)}>
+                  Responder
+                </button>
+              )}
+              {!msg.whisper && (
+                <button onClick={() => handleWhisper(msg.username)}>
+                  Susurrar
+                </button>
+              )}
+            </div>
+          ))}
         </div>
-      )}
-    </div>
-  );
+        <div className="WhisperMessagesContainer" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+          {whisperMessages.map((whisper, index) => (
+            <div
+              key={index}
+              className={`Message WhisperMessage`}
+            >
+              <strong>{whisper.username} (susurro):</strong> {whisper.content}
+            </div>
+          ))}
+        </div>
+        <form onSubmit={handleMessageSubmit}>
+          <input
+            type="text"
+            placeholder="Escribe un mensaje..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <button type="submit">
+            <IoSend className="sendIcon" />
+          </button>
+          <button onClick={handleReply} disabled={!whisperTarget}>
+            Responder
+          </button>
+        </form>
+        <button onClick={onSwitchToGamesChat}>Cambiar a Sala Games</button>
+      </div>
+    ) : (
+      <div onLoad={getUsernameFromSession}>
+        <h1>Ingresa un nombre para entrar al chat</h1>
+        <form onSubmit={handleUsernameSubmit}>
+          <input
+            type="text"
+            className="inputMessage"
+            placeholder="Nickname"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <button type="submit">Entrar al chat</button>
+        </form>
+      </div>
+    )}
+  </div>
+);
+  
 };
 
 export default GeneralChat;

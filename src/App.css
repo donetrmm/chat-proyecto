@@ -1,5 +1,3 @@
-/* App.css (o estilos en línea en el componente) */
-
 .App {
   display: flex;
   flex-direction: column;
@@ -98,13 +96,12 @@ button:hover {
   }
 }
 
-/* App.css */
 
 .ReturnButton {
   margin-top: 10px;
   padding: 10px 20px;
   font-size: 16px;
-  background-color: #d9534f; /* Color rojo para el botón de regreso */
+  background-color: #d9534f;
   color: #fff;
   border: none;
   border-radius: 5px;

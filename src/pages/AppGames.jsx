@@ -1,4 +1,3 @@
-// AppGames.js (Sala de Juegos)
 import React, { useState, useEffect, useRef } from 'react';
 import { IoSend } from 'react-icons/io5';
 import io from 'socket.io-client';
@@ -82,12 +81,11 @@ const AppGames = () => {
     setEnteredChat(false);
     setRoom(newRoom);
 
-    // Envía un mensaje de cambio de sala al servidor
     const switchRoomMessage = {
       type: 'switchRoom',
       content: `ha cambiado a la sala ${newRoom}.`,
       username,
-      oldRoom: 'games', // Sala actual (puedes ajustarla según la lógica)
+      oldRoom: 'games', 
       newRoom,
     };
 
@@ -122,7 +120,6 @@ const AppGames = () => {
             <button type="submit"><IoSend className='sendIcon' /></button>
           </form>
           
-          {/* Botón para cambiar a la sala general */}
           <button onClick={() => switchRoom('general')}>Entrar a la sala general</button>
         </div>
       ) : (

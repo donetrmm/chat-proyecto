@@ -1,4 +1,3 @@
-// GamesChat.jsx
 import React, { useState, useEffect } from 'react';
 import { IoSend } from 'react-icons/io5';
 import io from 'socket.io-client';

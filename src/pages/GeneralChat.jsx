@@ -14,7 +14,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const fetchConnectedUsers = async () => {
+    const fetchConnectedUsersLongPolling = async () => {
       try {
         const response = await fetch('http://localhost:8080/api/connections');
         if (!response.ok) {
@@ -24,14 +24,16 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
         setConnectedUsers(data.connections);
       } catch (error) {
         console.error(error.message);
+      } finally {
+        fetchConnectedUsersLongPolling();
       }
     };
 
-    const intervalId = setInterval(fetchConnectedUsers, 1000);
+    fetchConnectedUsersLongPolling();
 
-    fetchConnectedUsers();
-
-    return () => clearInterval(intervalId);
+    return () => {
+      clearInterval(fetchConnectedUsersLongPolling);
+    };
   }, []);
 
   useEffect(() => {
@@ -200,8 +202,8 @@ return (
       <div>
         <h1>Bienvenido al Chat, {username}!</h1>
         <div className="UserCountContainer">
-          <p>Usuarios Conectados: {connectedUsers}</p>
-        </div>
+        <p>Usuarios Conectados: {connectedUsers}</p>
+      </div>
         <div className="MessagesContainer" ref={messagesEndRef}>
           {messages.map((msg, index) => (
             <div

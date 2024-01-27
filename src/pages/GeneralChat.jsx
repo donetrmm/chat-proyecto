@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { IoSend } from 'react-icons/io5';
+import React, { useState, useEffect, useRef } from "react";
+import { IoSend } from "react-icons/io5";
 
 const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
-  const [username, setUsername] = useState(sessionStorage.getItem('user') || '');
-  const [message, setMessage] = useState('');
+  const [username, setUsername] = useState(
+    sessionStorage.getItem("user") || ""
+  );
+  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [socket, setSocket] = useState(null);
   const [enteredChat, setEnteredChat] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState(0);
-  const [whisperTarget, setWhisperTarget] = useState('');
+  const [whisperTarget, setWhisperTarget] = useState("");
   const [whisperMessages, setWhisperMessages] = useState([]);
 
   const messagesEndRef = useRef(null);
@@ -45,23 +47,25 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   useEffect(() => {
     const fetchConnectedUsersLongPolling = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/connections');
+        const response = await fetch("http://localhost:8080/api/connections");
         if (!response.ok) {
-          throw new Error(`Error al obtener la cantidad de usuarios conectados: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Error al obtener la cantidad de usuarios conectados: ${response.status} ${response.statusText}`
+          );
         }
         const data = await response.json();
         setConnectedUsers(data.connections);
       } catch (error) {
         console.error(error.message);
       } finally {
-        fetchConnectedUsersLongPolling();
+        setTimeout(fetchConnectedUsersLongPolling, 2000);
       }
     };
 
     fetchConnectedUsersLongPolling();
 
     return () => {
-      clearInterval(fetchConnectedUsersLongPolling);
+      clearTimeout(fetchConnectedUsersLongPolling);
     };
   }, []);
 
@@ -74,9 +78,9 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   }, [messages, whisperMessages]);
 
   //WEBSOCKET
-  
+
   useEffect(() => {
-    const newSocket = new WebSocket('ws://localhost:8080/api/chat');
+    const newSocket = new WebSocket("ws://localhost:8080/api/chat");
     setSocket(newSocket);
 
     return () => {
@@ -91,101 +95,111 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
       const newMessage = JSON.parse(event.data);
 
       if (newMessage.whisper) {
-        setWhisperMessages((prevWhisperMessages) => [...prevWhisperMessages, newMessage]);
+        setWhisperMessages((prevWhisperMessages) => [
+          ...prevWhisperMessages,
+          newMessage,
+        ]);
       } else {
         setMessages((prevMessages) => [...prevMessages, newMessage]);
       }
 
       if (newMessage.whisper && newMessage.whisperTarget === username) {
-        setWhisperTarget('');
+        setWhisperTarget("");
       }
     };
 
     const handleSocketClose = () => {
-      console.log('Conexión cerrada');
+      console.log("Conexión cerrada");
 
       setTimeout(() => {
-        console.log('Intentando reconectar...');
-        const newSocket = new WebSocket('ws://localhost:8080/api/chat');
-        setSocket(newSocket);
+        if (socket.readyState === WebSocket.CLOSED) {
+          console.log("Intentando reconectar...");
+          const newSocket = new WebSocket("ws://localhost:8080/api/chat");
+          setSocket(newSocket);
+        }
       }, 2000);
     };
 
-    socket.addEventListener('message', handleSocketMessage);
-    socket.addEventListener('close', handleSocketClose);
+    socket.addEventListener("message", handleSocketMessage);
+    socket.addEventListener("close", handleSocketClose);
 
     return () => {
-      socket.removeEventListener('message', handleSocketMessage);
-      socket.removeEventListener('close', handleSocketClose);
+      socket.removeEventListener("message", handleSocketMessage);
+      socket.removeEventListener("close", handleSocketClose);
     };
   }, [socket, username]);
 
   const handleUsernameSubmit = (e) => {
     e.preventDefault();
 
-    sessionStorage.setItem('user', username);
+    sessionStorage.setItem("user", username);
 
-    if (username.trim() !== '') {
-      const welcomeMessage = 'se ha unido al chat.';
+    if (username.trim() !== "") {
+      const welcomeMessage = "se ha unido al chat.";
       const messageObject = {
-        type: 'message',
+        type: "message",
         content: welcomeMessage,
         username,
       };
 
       socket.send(JSON.stringify(messageObject));
-      setMessage('');
+      setMessage("");
       setEnteredChat(true);
       onUsernameSubmit(username);
     }
   };
 
-  const handleMessageSubmit = (e) => {
+  const handleMessageSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (message.trim() !== '') {
       const whisperMatch = message.match(/^\/whisper (\w+) (.+)/);
       if (whisperMatch) {
         const whisperTarget = whisperMatch[1];
         const whisperContent = whisperMatch[2];
-
-        fetch('http://localhost:8080/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username,
-            content: whisperContent,
-            whisper: true,
-            whisperTarget,
-          }),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log('Response from server:', data);
-          })
-          .catch((error) => {
-            console.error('Error sending whisper:', error);
+  
+        try {
+          const response = await fetch('http://localhost:8080/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username,
+              content: whisperContent,
+              whisper: true,
+              whisperTarget,
+            }),
           });
+  
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+  
+          const data = await response.json();
+          console.log('Response from server:', data);
+        } catch (error) {
+          console.error('Error sending whisper:', error);
+        }
       } else {
         const messageObject = {
           type: 'message',
           content: message,
           username,
         };
-
-        socket.send(JSON.stringify(messageObject));
+  
+        // Manejo de errores al enviar mensajes a través de WebSocket
+        try {
+          socket.send(JSON.stringify(messageObject));
+        } catch (error) {
+          console.error('Error sending message via WebSocket:', error);
+        }
       }
-
+  
       setMessage('');
     }
   };
+  
 
   const handleWhisper = (whisperTarget) => {
     setMessage(`/whisper ${whisperTarget} `);
@@ -199,7 +213,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
   };
 
   const getUsernameFromSession = () => {
-    const user = sessionStorage.getItem('user');
+    const user = sessionStorage.getItem("user");
     setUsername(user);
   };
 
@@ -216,8 +230,8 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
               <div
                 key={index}
                 className={`Message ${
-                  msg.username === username ? 'UserMessage' : 'OtherMessage'
-                }${msg.whisper ? ' WhisperMessage' : ''}`}
+                  msg.username === username ? "UserMessage" : "OtherMessage"
+                }${msg.whisper ? " WhisperMessage" : ""}`}
               >
                 <strong>{msg.username}:</strong> {msg.content}
                 {msg.whisper && (
@@ -235,7 +249,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
           </div>
           <div
             className="WhisperMessagesContainer"
-            style={{ maxHeight: '200px', overflowY: 'auto' }}
+            style={{ maxHeight: "200px", overflowY: "auto" }}
           >
             {whisperMessages.map((whisper, index) => (
               <div key={index} className={`Message WhisperMessage`}>
@@ -253,7 +267,11 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
             <button type="submit">
               <IoSend className="sendIcon" />
             </button>
-            <button onClick={handleReply} disabled={!whisperTarget}>
+            <button
+              type="button"
+              onClick={handleReply}
+              disabled={!whisperTarget}
+            >
               Responder
             </button>
           </form>
@@ -270,6 +288,7 @@ const GeneralChat = ({ onUsernameSubmit, onSwitchToGamesChat }) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
+
             <button type="submit">Entrar al chat</button>
           </form>
         </div>
